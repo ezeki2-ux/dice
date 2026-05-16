@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Color Dice Arena</title>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.42.0/dist/umd/supabase.js"></script>
+    
     <style>
         :root {
             --bg-body: #0a0a0c; --bg-panel: #141417; --bg-item: #1f1f24; --border-color: #2b2b33;
@@ -20,11 +22,9 @@
             min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;
         }
 
-        /* Views configuration toggles */
         .view-section { display: none; width: 100%; max-width: 600px; flex-direction: column; align-items: center; }
         .active-view { display: flex; }
 
-        /* Wallpaper background */
         .elephant-wallpaper {
             position: fixed; top: 0; left: 0; width: 200%; height: 200%;
             background-image: url('https://i.postimg.co/6qLhMbyr/strawberry-elephant-transparent.png');
@@ -33,7 +33,6 @@
         }
         @keyframes diagonalScroll { 0% { transform: translate(0, 0); } 100% { transform: translate(-200px, -200px); } }
 
-        /* Dice Display Styles */
         h1 { font-size: 2.2rem; margin-bottom: 20px; text-shadow: 2px 2px 0px rgba(0,0,0,0.5); text-align: center;}
         .color-pool-label { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 12px; font-weight: 700; }
         .color-pool { display: flex; gap: 12px; background: var(--bg-panel); padding: 14px 24px; border-radius: 40px; border: 3px solid var(--border-color); margin-bottom: 40px; flex-wrap: wrap; justify-content: center; }
@@ -48,7 +47,6 @@
         @keyframes bubbleTumble { 0% { transform: scale(0.85) rotate(0deg); } 30% { transform: scale(1.2) rotate(-60deg); } 70% { transform: scale(1.1) rotate(420deg); } 100% { transform: scale(1) rotate(360deg); } }
         .roll-btn { padding: 18px 60px; font-size: 1.5rem; font-weight: 700; font-family: 'Fredoka', sans-serif; background: var(--button-bg); color: var(--button-text); border: 4px solid transparent; border-radius: 40px; cursor: pointer; box-shadow: 0 8px 0px rgba(0,0,0,0.4); }
 
-        /* Remote Control Pad Styles */
         .remote-card { background: var(--bg-panel); border: 2px solid var(--border-color); border-radius: 20px; padding: 24px; width: 100%; box-sizing: border-box; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         .remote-title { color: var(--accent-color); font-weight: 700; font-size: 1.4rem; text-transform: uppercase; margin-bottom: 20px; text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
         .control-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; width: 100%; }
@@ -107,7 +105,6 @@
     </div>
 
     <script>
-        // --- DATA SETUP ---
         const diceOutcomes = [
             { number: 1, name: "Black", bg: "#1a1a24", text: "#ffffff", active: true },
             { number: 2, name: "Blue", bg: "#0070f3", text: "#ffffff", active: true },
@@ -117,13 +114,8 @@
             { number: 6, name: "White", bg: "#ffffff", text: "#0b0d16", active: true }
         ];
 
-        // Rigger state shared across channels
-        let currentRigState = {
-            forceValue: "random",
-            allowedIndices: [0, 1, 2, 3, 4, 5]
-        };
+        let currentRigState = { forceValue: "random", allowedIndices: [0, 1, 2, 3, 4, 5] };
 
-        // --- MULTI-DEVICE VIEW ROUTER ---
         const urlParams = new URLSearchParams(window.location.search);
         const isRemoteControl = urlParams.get('control') === 'true';
 
@@ -135,7 +127,6 @@
             setupGameInterface();
         }
 
-        // --- INTERFACE BUILDERS ---
         function setupGameInterface() {
             const legendContainer = document.getElementById('pool-legend');
             diceOutcomes.forEach(item => {
@@ -153,7 +144,6 @@
                 btn.className = 'filter-btn';
                 btn.style.color = item.bg;
                 btn.innerHTML = `<span class="color-dot" style="background-color: ${item.bg};"></span> ${item.name}`;
-                
                 btn.onclick = () => {
                     if (item.active && diceOutcomes.filter(o => o.active).length <= 1) return;
                     item.active = !item.active;
@@ -164,18 +154,19 @@
             });
         }
 
-        // --- BROADCAST ROUTER (SUPABASE ENGINE) ---
+        // --- HARDENED WEB CONFIG ---
         const SUPABASE_URL = "https://sdzxiwctcsgvwsnpkcln.supabase.co";
         const SUPABASE_KEY = "sb_publishable_jtGiCYw904YDKzsfKdTZnw_ruEw_OTn";
         
         let channel;
-        if(SUPABASE_URL !== "YOUR_SUPABASE_URL") {
-            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Use the explicit browser global object 'supabase' safely
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+            const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             channel = supabaseClient.channel('dice-arena-room', { config: { broadcast: { self: true } } });
 
-            channel.on('broadcast', { event: 'rig_update' }, ({ payload }) => {
-                currentRigState = payload;
-            }).on('broadcast', { event: 'trigger_roll' }, () => {
+            channel.on('broadcast', { event: 'rig_update' }, function(data) {
+                currentRigState = data.payload;
+            }).on('broadcast', { event: 'trigger_roll' }, function() {
                 executeDiceRoll();
             }).subscribe();
         }
@@ -208,7 +199,6 @@
             }
         }
 
-        // --- DICE ENGINE EXECUTION ---
         const diceIds = ['die-0', 'id-1', 'id-2', 'id-3'];
         let isRolling = false;
 
