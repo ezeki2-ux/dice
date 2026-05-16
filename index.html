@@ -3,276 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Color Dice Pool</title>
+    <title>Color Dice Arena</title>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --bg-body: #0b0d16;
-            --bg-panel: #151926;
-            --bg-item: #1f2538;
-            --border-color: #242b42;
-            --text-main: #f1f5f9;
-            --text-muted: #64748b;
-            --dice-bg: #1e2336;
-            --dice-border: #333f5c;
-            --button-bg: #ffffff;
-            --button-text: #0b0d16;
-            --bg-opacity: 0.15;
-            --accent-color: #ff0055;
-        }
-
-        [data-theme="black"] {
             --bg-body: #0a0a0c; --bg-panel: #141417; --bg-item: #1f1f24; --border-color: #2b2b33;
             --text-main: #ffffff; --text-muted: #71717a; --dice-bg: #1f1f24; --dice-border: #3f3f46;
-            --button-bg: #ffffff; --button-text: #0a0a0c; --bg-opacity: 0.18;
+            --button-bg: #ffffff; --button-text: #0a0a0c; --bg-opacity: 0.18; --accent-color: #ff0055;
         }
 
         body {
             font-family: 'Fredoka', system-ui, sans-serif;
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-            position: relative;
-            overflow-x: hidden;
+            background-color: var(--bg-body); color: var(--text-main);
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;
         }
 
+        /* Views configuration toggles */
+        .view-section { display: none; width: 100%; max-width: 600px; flex-direction: column; align-items: center; }
+        .active-view { display: flex; }
+
+        /* Wallpaper background */
         .elephant-wallpaper {
-            position: fixed;
-            top: 0; left: 0; width: 200%; height: 200%;
+            position: fixed; top: 0; left: 0; width: 200%; height: 200%;
             background-image: url('https://i.postimg.co/6qLhMbyr/strawberry-elephant-transparent.png');
-            background-size: 200px 200px; background-repeat: repeat;
-            opacity: var(--bg-opacity); z-index: -1; pointer-events: none;
+            background-size: 200px 200px; background-repeat: repeat; opacity: var(--bg-opacity); z-index: -1; pointer-events: none;
             animation: diagonalScroll 35s linear infinite;
         }
+        @keyframes diagonalScroll { 0% { transform: translate(0, 0); } 100% { transform: translate(-200px, -200px); } }
 
-        @keyframes diagonalScroll {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(-200px, -200px); }
-        }
-
-        .settings-header {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 30px;
-            z-index: 10;
-            width: 100%;
-            max-width: 600px;
-        }
-
-        .config-box {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            background-color: var(--bg-panel);
-            padding: 10px 16px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-        }
-
-        .dropdown-wrapper {
-            position: relative;
-            display: inline-block;
-        }
-
-        .theme-dropdown {
-            background-color: var(--bg-item);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            padding: 6px 30px 6px 12px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            font-family: 'Fredoka', sans-serif;
-            border-radius: 6px;
-            cursor: pointer;
-            outline: none;
-            appearance: none;
-        }
-
-        /* SECRET DRAGGABLE RIGGER OVERLAY */
-        .secret-rigger-container {
-            display: none; 
-            flex-direction: column;
-            gap: 12px;
-            padding: 0 16px 16px 16px;
-            background-color: #0b0d16f2;
-            border: 2px solid var(--accent-color);
-            border-radius: 16px;
-            width: 340px;
-            box-sizing: border-box;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(255, 0, 85, 0.3);
-            position: fixed;
-            z-index: 9999;
-            user-select: none;
-        }
-
-        .rigger-drag-header {
-            padding: 12px 0;
-            cursor: move;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-bottom: 1px solid #242b42;
-            width: 100%;
-            margin-bottom: 8px;
-        }
-
-        .rigger-drag-title {
-            color: var(--accent-color);
-            font-weight: 800;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .rigger-drag-title::before, .rigger-drag-title::after {
-            content: "•••"; opacity: 0.5; letter-spacing: -1px;
-        }
-
-        .rigger-row {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
-            width: 100%;
-        }
-
-        .rigger-label {
-            color: var(--text-muted);
-            font-weight: 700;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .blacklist-selectors {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            width: 100%;
-        }
-
-        .blacklist-btn {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 10px;
-            background-color: #1f2538;
-            border: 2px solid var(--border-color);
-            border-radius: 20px;
-            color: var(--text-main);
-            font-family: 'Fredoka', sans-serif;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s ease;
-        }
-
-        .blacklist-btn.blocked {
-            opacity: 0.25;
-            border-color: var(--accent-color);
-            text-decoration: line-through;
-        }
-
-        h1 {
-            font-size: 2.2rem; margin-bottom: 20px; font-weight: 700;
-            letter-spacing: 0.02em; text-shadow: 2px 2px 0px rgba(0,0,0,0.5); z-index: 10;
-        }
-
-        .color-pool-label {
-            font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em;
-            color: var(--text-muted); margin-bottom: 12px; font-weight: 700; z-index: 10;
-        }
-
-        .color-pool {
-            display: flex; gap: 12px; background: var(--bg-panel); padding: 14px 24px;
-            border-radius: 40px; border: 3px solid var(--border-color); margin-bottom: 40px;
-            box-shadow: 0 6px 0px rgba(0,0,0,0.4); flex-wrap: wrap; justify-content: center; z-index: 10;
-        }
-
-        .pool-item {
-            display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 700;
-            background: var(--bg-item); padding: 8px 16px; border-radius: 25px; border: 2px solid var(--border-color);
-        }
-
+        /* Dice Display Styles */
+        h1 { font-size: 2.2rem; margin-bottom: 20px; text-shadow: 2px 2px 0px rgba(0,0,0,0.5); text-align: center;}
+        .color-pool-label { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 12px; font-weight: 700; }
+        .color-pool { display: flex; gap: 12px; background: var(--bg-panel); padding: 14px 24px; border-radius: 40px; border: 3px solid var(--border-color); margin-bottom: 40px; flex-wrap: wrap; justify-content: center; }
+        .pool-item { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 700; background: var(--bg-item); padding: 8px 16px; border-radius: 25px; border: 2px solid var(--border-color); }
         .color-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
-
-        .dice-grid {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px;
-            max-width: 380px; width: 100%; margin-bottom: 40px; z-index: 10;
-        }
-
-        @media (min-width: 450px) {
-            .dice-grid { grid-template-columns: repeat(4, 1fr); max-width: 680px; }
-        }
-
+        .dice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px; max-width: 380px; width: 100%; margin-bottom: 40px; }
+        @media (min-width: 450px) { .dice-grid { grid-template-columns: repeat(4, 1fr); max-width: 680px; } }
         .die-box { display: flex; flex-direction: column; align-items: center; }
-
-        .dice {
-            width: 110px; height: 110px; background-color: var(--dice-bg); border: 4px solid var(--dice-border);
-            border-radius: 35px; display: flex; align-items: center; justify-content: center; font-size: 3rem;
-            font-weight: 700; color: var(--text-muted); box-shadow: 0 8px 0px rgba(0,0,0,0.4);
-            transition: transform 0.1s, background-color 0.4s, box-shadow 0.4s, color 0.4s, border-color 0.3s; user-select: none;
-        }
-
-        .die-label {
-            margin-top: 12px; font-size: 1.1rem; font-weight: 700; min-height: 20px;
-            color: #ffffff !important; text-shadow: 1px 1px 3px rgba(0,0,0,0.8), 0 0 4px rgba(0,0,0,0.5);
-        }
-
+        .dice { width: 110px; height: 110px; background-color: var(--dice-bg); border: 4px solid var(--dice-border); border-radius: 35px; display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: 700; color: var(--text-muted); box-shadow: 0 8px 0px rgba(0,0,0,0.4); transition: all 0.4s; user-select: none; }
+        .die-label { margin-top: 12px; font-size: 1.1rem; font-weight: 700; min-height: 20px; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
         .rolling { animation: bubbleTumble 0.5s ease-in-out; }
+        @keyframes bubbleTumble { 0% { transform: scale(0.85) rotate(0deg); } 30% { transform: scale(1.2) rotate(-60deg); } 70% { transform: scale(1.1) rotate(420deg); } 100% { transform: scale(1) rotate(360deg); } }
+        .roll-btn { padding: 18px 60px; font-size: 1.5rem; font-weight: 700; font-family: 'Fredoka', sans-serif; background: var(--button-bg); color: var(--button-text); border: 4px solid transparent; border-radius: 40px; cursor: pointer; box-shadow: 0 8px 0px rgba(0,0,0,0.4); }
 
-        @keyframes bubbleTumble {
-            0% { transform: scale(0.85) rotate(0deg); }
-            30% { transform: scale(1.2) rotate(-60deg); }
-            70% { transform: scale(1.1) rotate(420deg); }
-            100% { transform: scale(1) rotate(360deg); }
-        }
-
-        .roll-btn {
-            padding: 18px 60px; font-size: 1.5rem; font-weight: 700; font-family: 'Fredoka', sans-serif;
-            background: var(--button-bg); color: var(--button-text); border: 4px solid transparent;
-            border-radius: 40px; cursor: pointer; box-shadow: 0 8px 0px rgba(0,0,0,0.4); transition: all 0.1s ease; z-index: 10;
-        }
+        /* Remote Control Pad Styles */
+        .remote-card { background: var(--bg-panel); border: 2px solid var(--border-color); border-radius: 20px; padding: 24px; width: 100%; box-sizing: border-box; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .remote-title { color: var(--accent-color); font-weight: 700; font-size: 1.4rem; text-transform: uppercase; margin-bottom: 20px; text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+        .control-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; width: 100%; }
+        .control-label { color: var(--text-muted); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; }
+        .remote-select { background: var(--bg-item); color: #fff; border: 2px solid var(--accent-color); padding: 12px; border-radius: 10px; font-family: 'Fredoka', sans-serif; font-size: 1rem; width: 100%; outline: none; }
+        .filter-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
+        .filter-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; background: var(--bg-item); border: 2px solid var(--border-color); border-radius: 12px; color: #fff; font-family: 'Fredoka', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.1s ease; }
+        .filter-btn.blocked { opacity: 0.25; border-color: var(--accent-color); text-decoration: line-through; }
+        .action-btn { width: 100%; padding: 16px; font-size: 1.2rem; font-weight: 700; border-radius: 12px; border: none; cursor: pointer; font-family: 'Fredoka', sans-serif; margin-top: 10px; transition: transform 0.1s; }
+        .trigger-btn { background: var(--accent-color); color: white; box-shadow: 0 5px 0 #b3003b; }
+        .trigger-btn:active { transform: translateY(4px); box-shadow: none; }
     </style>
 </head>
-<body data-theme="black">
+<body>
 
     <div class="elephant-wallpaper"></div>
 
-    <div class="settings-header">
-        <div class="config-box">
-            <label for="theme-select">Theme:</label>
-            <div class="dropdown-wrapper">
-                <select id="theme-select" class="theme-dropdown" onchange="setTheme(this.value)">
-                    <option value="black">Black</option>
-                </select>
-            </div>
+    <div id="game-view" class="view-section">
+        <h1>Color Dice Roller</h1>
+        <div class="color-pool-label">Possible Dice Results</div>
+        <div class="color-pool" id="pool-legend"></div>
+        
+        <div class="dice-grid">
+            <div class="die-box"><div class="dice" id="die-0">?</div><div class="die-label" id="label-0"></div></div>
+            <div class="die-box"><div class="dice" id="id-1">?</div><div class="die-label" id="label-1"></div></div>
+            <div class="die-box"><div class="dice" id="id-2">?</div><div class="die-label" id="label-2"></div></div>
+            <div class="die-box"><div class="dice" id="id-3">?</div><div class="die-label" id="label-3"></div></div>
         </div>
+        <button class="roll-btn" onclick="localRollTrigger()">Roll All</button>
     </div>
 
-    <div class="secret-rigger-container" id="master-rig-panel">
-        <div class="rigger-drag-header" id="panel-drag-handle">
-            <div class="rigger-drag-title">Control Utility</div>
-        </div>
-        <div class="rigger-row" style="border-bottom: 1px solid #242b42; padding-bottom: 12px; margin-bottom: 4px;">
-            <span class="rigger-label">Force All Dice:</span>
-            <div class="dropdown-wrapper" style="width: 100%;">
-                <select id="force-select" class="theme-dropdown" style="border-color: var(--accent-color); color: #fff; width: 100%; box-sizing: border-box;">
+    <div id="remote-view" class="view-section">
+        <div class="remote-card">
+            <div class="remote-title">Rigger Command Center</div>
+            
+            <div class="control-row">
+                <span class="control-label">Force Outcome (All Dice):</span>
+                <select id="remote-force-select" class="remote-select" onchange="updateRemoteSettings()">
                     <option value="random">Disabled (Fair Random)</option>
                     <option value="0">Force Black (1)</option>
                     <option value="1">Force Blue (2)</option>
@@ -282,27 +96,18 @@
                     <option value="5">Force White (6)</option>
                 </select>
             </div>
-        </div>
-        <div class="rigger-row">
-            <span class="rigger-label">Exclusion Filters:</span>
-            <div class="blacklist-selectors" id="blacklist-btn-container"></div>
-        </div>
-    </div>
 
-    <h1>Color Dice Roller</h1>
-    <div class="color-pool-label">Possible Dice Results</div>
-    <div class="color-pool" id="pool-legend"></div>
-    
-    <div class="dice-grid">
-        <div class="die-box"><div class="dice" id="die-0">?</div><div class="die-label" id="label-0"></div></div>
-        <div class="die-box"><div class="dice" id="id-1">?</div><div class="die-label" id="label-1"></div></div>
-        <div class="die-box"><div class="dice" id="id-2">?</div><div class="die-label" id="label-2"></div></div>
-        <div class="die-box"><div class="dice" id="id-3">?</div><div class="die-label" id="label-3"></div></div>
+            <div class="control-row">
+                <span class="control-label">Allowed Outcome Filters:</span>
+                <div class="filter-grid" id="remote-filter-grid"></div>
+            </div>
+
+            <button class="action-btn trigger-btn" onclick="sendRollCommand()">⚡ TRIGGER REMOTE ROLL</button>
+        </div>
     </div>
-    
-    <button class="roll-btn" onclick="rollAllDice()">Roll All</button>
 
     <script>
+        // --- DATA SETUP ---
         const diceOutcomes = [
             { number: 1, name: "Black", bg: "#1a1a24", text: "#ffffff", active: true },
             { number: 2, name: "Blue", bg: "#0070f3", text: "#ffffff", active: true },
@@ -312,102 +117,111 @@
             { number: 6, name: "White", bg: "#ffffff", text: "#0b0d16", active: true }
         ];
 
-        const legendContainer = document.getElementById('pool-legend');
-        diceOutcomes.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'pool-item';
-            div.innerHTML = `<span class="color-dot" style="background-color: ${item.bg};"></span> ${item.name}`;
-            legendContainer.appendChild(div);
-        });
+        // Rigger state shared across channels
+        let currentRigState = {
+            forceValue: "random",
+            allowedIndices: [0, 1, 2, 3, 4, 5]
+        };
 
-        const buttonsContainer = document.getElementById('blacklist-btn-container');
-        diceOutcomes.forEach((item, index) => {
-            const btn = document.createElement('button');
-            btn.className = 'blacklist-btn';
-            btn.style.color = item.bg;
-            btn.innerHTML = `<span class="color-dot" style="background-color: ${item.bg};"></span> ${item.name}`;
-            btn.onclick = () => {
-                if (item.active && diceOutcomes.filter(o => o.active).length <= 1) return;
-                item.active = !item.active;
-                btn.classList.toggle('blocked', !item.active);
-            };
-            buttonsContainer.appendChild(btn);
-        });
+        // --- MULTI-DEVICE VIEW ROUTER ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const isRemoteControl = urlParams.get('control') === 'true';
 
-        // --- KEY LISTENER FOR "RIG" ---
-        let inputSequence = "";
-        const targetSequence = "rig";
-        const secretPassword = "1234";
-        const panel = document.getElementById('master-rig-panel');
+        if (isRemoteControl) {
+            document.getElementById('remote-view').classList.add('active-view');
+            setupRemoteInterface();
+        } else {
+            document.getElementById('game-view').classList.add('active-view');
+            setupGameInterface();
+        }
 
-        window.addEventListener('keydown', (e) => {
-            inputSequence += e.key.toLowerCase();
-            if (inputSequence.length > targetSequence.length) {
-                inputSequence = inputSequence.substr(inputSequence.length - targetSequence.length);
+        // --- INTERFACE BUILDERS ---
+        function setupGameInterface() {
+            const legendContainer = document.getElementById('pool-legend');
+            diceOutcomes.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'pool-item';
+                div.innerHTML = `<span class="color-dot" style="background-color: ${item.bg};"></span> ${item.name}`;
+                legendContainer.appendChild(div);
+            });
+        }
+
+        function setupRemoteInterface() {
+            const filterGrid = document.getElementById('remote-filter-grid');
+            diceOutcomes.forEach((item, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'filter-btn';
+                btn.style.color = item.bg;
+                btn.innerHTML = `<span class="color-dot" style="background-color: ${item.bg};"></span> ${item.name}`;
+                
+                btn.onclick = () => {
+                    if (item.active && diceOutcomes.filter(o => o.active).length <= 1) return;
+                    item.active = !item.active;
+                    btn.classList.toggle('blocked', !item.active);
+                    updateRemoteSettings();
+                };
+                filterGrid.appendChild(btn);
+            });
+        }
+
+        // --- BROADCAST ROUTER (SUPABASE ENGINE) ---
+        const SUPABASE_URL = "https://sdzxiwctcsgvwsnpkcln.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_jtGiCYw904YDKzsfKdTZnw_ruEw_OTn";
+        
+        let channel;
+        if(SUPABASE_URL !== "YOUR_SUPABASE_URL") {
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            channel = supabaseClient.channel('dice-arena-room', { config: { broadcast: { self: true } } });
+
+            channel.on('broadcast', { event: 'rig_update' }, ({ payload }) => {
+                currentRigState = payload;
+            }).on('broadcast', { event: 'trigger_roll' }, () => {
+                executeDiceRoll();
+            }).subscribe();
+        }
+
+        function updateRemoteSettings() {
+            const forceSelectVal = document.getElementById('remote-force-select').value;
+            const activeIndices = [];
+            diceOutcomes.forEach((o, i) => { if (o.active) activeIndices.push(i); });
+
+            if(channel) {
+                channel.send({
+                    type: 'broadcast',
+                    event: 'rig_update',
+                    payload: { forceValue: forceSelectVal, allowedIndices: activeIndices }
+                });
             }
+        }
 
-            if (inputSequence === targetSequence) {
-                inputSequence = ""; 
-                const userAttempt = prompt("Enter access credentials:");
-                if (userAttempt === secretPassword) {
-                    if (panel.style.display !== 'flex') {
-                        panel.style.top = "25%";
-                        panel.style.left = "calc(50% - 170px)";
-                        panel.style.display = 'flex';
-                    } else {
-                        panel.style.display = 'none';
-                    }
-                }
+        function sendRollCommand() {
+            if(channel) {
+                channel.send({ type: 'broadcast', event: 'trigger_roll', payload: {} });
             }
-            if (e.key === "Escape") panel.style.display = 'none';
-        });
-
-        // --- DRAG SYSTEM ---
-        const dragHandle = document.getElementById('panel-drag-handle');
-        let isDragging = false, startX, startY, initialLeft, initialTop;
-
-        dragHandle.addEventListener('mousedown', startDrag);
-        dragHandle.addEventListener('touchstart', startDrag, { passive: true });
-
-        function startDrag(e) {
-            isDragging = true;
-            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-            startX = clientX; startY = clientY;
-            const rect = panel.getBoundingClientRect();
-            initialLeft = rect.left; initialTop = rect.top;
-            document.addEventListener('mousemove', dragMove);
-            document.addEventListener('mouseup', stopDrag);
         }
 
-        function dragMove(e) {
-            if (!isDragging) return;
-            const clientX = e.clientX; const clientY = e.clientY;
-            panel.style.left = `${initialLeft + (clientX - startX)}px`;
-            panel.style.top = `${initialTop + (clientY - startY)}px`;
+        function localRollTrigger() {
+            if(channel) {
+                channel.send({ type: 'broadcast', event: 'trigger_roll', payload: {} });
+            } else {
+                executeDiceRoll();
+            }
         }
 
-        function stopDrag() {
-            isDragging = false;
-            document.removeEventListener('mousemove', dragMove); document.removeEventListener('mouseup', stopDrag);
-        }
-
-        // --- DICE LOGIC ---
+        // --- DICE ENGINE EXECUTION ---
         const diceIds = ['die-0', 'id-1', 'id-2', 'id-3'];
         let isRolling = false;
 
-        function rollAllDice() {
+        function executeDiceRoll() {
             if (isRolling) return;
             isRolling = true;
-
-            const forceValue = document.getElementById('force-select').value;
-            const allowedOutcomes = diceOutcomes.filter(o => o.active);
 
             diceIds.forEach((id, index) => {
                 const die = document.getElementById(id);
                 const label = document.getElementById(`label-${index}`);
-                die.classList.add('rolling');
+                if(!die) return;
                 
+                die.classList.add('rolling');
                 let shuffleInterval = setInterval(() => {
                     die.textContent = Math.floor(Math.random() * 6) + 1;
                 }, 60);
@@ -416,7 +230,14 @@
                     clearInterval(shuffleInterval);
                     die.classList.remove('rolling');
                     
-                    let outcome = forceValue !== "random" ? diceOutcomes[parseInt(forceValue)] : allowedOutcomes[Math.floor(Math.random() * allowedOutcomes.length)];
+                    let outcome;
+                    if (currentRigState.forceValue !== "random") {
+                        outcome = diceOutcomes[parseInt(currentRigState.forceValue)];
+                    } else {
+                        const allowed = currentRigState.allowedIndices;
+                        const randIndex = allowed[Math.floor(Math.random() * allowed.length)];
+                        outcome = diceOutcomes[randIndex];
+                    }
                     
                     die.textContent = outcome.number;
                     die.style.backgroundColor = outcome.bg;
@@ -427,7 +248,6 @@
                 }, 500 + (index * 80));
             });
         }
-        function setTheme(t) { document.body.setAttribute('data-theme', t); }
     </script>
 </body>
 </html>
