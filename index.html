@@ -33,11 +33,15 @@
         }
         @keyframes diagonalScroll { 0% { transform: translate(0, 0); } 100% { transform: translate(-200px, -200px); } }
 
-        h1 { font-size: 2.2rem; margin-bottom: 20px; text-shadow: 2px 2px 0px rgba(0,0,0,0.5); text-align: center;}
+        h1 { font-size: 2.2rem; margin-bottom: 5px; text-shadow: 2px 2px 0px rgba(0,0,0,0.5); text-align: center;}
+        
+        .room-badge { background: #10b981; color: #000; font-weight: 700; padding: 6px 16px; border-radius: 20px; margin-bottom: 25px; font-size: 1.1rem; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2); }
+        
         .color-pool-label { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 12px; font-weight: 700; }
         .color-pool { display: flex; gap: 12px; background: var(--bg-panel); padding: 14px 24px; border-radius: 40px; border: 3px solid var(--border-color); margin-bottom: 40px; flex-wrap: wrap; justify-content: center; }
         .pool-item { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 700; background: var(--bg-item); padding: 8px 16px; border-radius: 25px; border: 2px solid var(--border-color); }
         .color-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+        
         .dice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px; max-width: 380px; width: 100%; margin-bottom: 40px; }
         @media (min-width: 450px) { .dice-grid { grid-template-columns: repeat(4, 1fr); max-width: 680px; } }
         .die-box { display: flex; flex-direction: column; align-items: center; }
@@ -52,12 +56,18 @@
         .control-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; width: 100%; }
         .control-label { color: var(--text-muted); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; }
         .remote-select { background: var(--bg-item); color: #fff; border: 2px solid var(--accent-color); padding: 12px; border-radius: 10px; font-family: 'Fredoka', sans-serif; font-size: 1rem; width: 100%; outline: none; }
+        
+        .room-input-container { display: flex; gap: 10px; width: 100%; }
+        .room-input { background: var(--bg-item); color: #fff; border: 2px solid var(--border-color); padding: 12px; border-radius: 10px; font-family: 'Fredoka', sans-serif; font-size: 1.1rem; font-weight:700; width: 100%; text-transform: uppercase; text-align: center; outline: none; }
+        .room-connect-btn { background: #10b981; color: black; border: none; padding: 0 20px; font-weight: 700; border-radius: 10px; cursor: pointer; font-family: 'Fredoka', sans-serif; }
+        
         .filter-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
         .filter-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; background: var(--bg-item); border: 2px solid var(--border-color); border-radius: 12px; color: #fff; font-family: 'Fredoka', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.1s ease; }
         .filter-btn.blocked { opacity: 0.25; border-color: var(--accent-color); text-decoration: line-through; }
         .action-btn { width: 100%; padding: 16px; font-size: 1.2rem; font-weight: 700; border-radius: 12px; border: none; cursor: pointer; font-family: 'Fredoka', sans-serif; margin-top: 10px; transition: transform 0.1s; }
         .trigger-btn { background: var(--accent-color); color: white; box-shadow: 0 5px 0 #b3003b; }
         .trigger-btn:active { transform: translateY(4px); box-shadow: none; }
+        .hidden-controls { display: none; width: 100%; flex-direction: column; }
     </style>
 </head>
 <body>
@@ -66,6 +76,8 @@
 
     <div id="game-view" class="view-section">
         <h1>Color Dice Roller</h1>
+        <div class="room-badge" id="room-display">Room: Loading...</div>
+        
         <div class="color-pool-label">Possible Dice Results</div>
         <div class="color-pool" id="pool-legend"></div>
         
@@ -80,27 +92,37 @@
 
     <div id="remote-view" class="view-section">
         <div class="remote-card">
-            <div class="remote-title">Rigger Command Center</div>
+            <div class="remote-title">Targeted Rigger Command Center</div>
             
             <div class="control-row">
-                <span class="control-label">Force Outcome (All Dice):</span>
-                <select id="remote-force-select" class="remote-select" onchange="updateRemoteSettings()">
-                    <option value="random">Disabled (Fair Random)</option>
-                    <option value="0">Force Black (1)</option>
-                    <option value="1">Force Blue (2)</option>
-                    <option value="2">Force Green (3)</option>
-                    <option value="3">Force Purple (4)</option>
-                    <option value="4">Force Red (5)</option>
-                    <option value="5">Force White (6)</option>
-                </select>
+                <span class="control-label">Target Player Room Code:</span>
+                <div class="room-input-container">
+                    <input type="text" id="target-room-input" class="room-input" placeholder="e.g. A7B3" maxlength="4">
+                    <button class="room-connect-btn" onclick="connectToTargetRoom()">Connect</button>
+                </div>
             </div>
 
-            <div class="control-row">
-                <span class="control-label">Allowed Outcome Filters:</span>
-                <div class="filter-grid" id="remote-filter-grid"></div>
-            </div>
+            <div id="active-controls" class="hidden-controls">
+                <div class="control-row">
+                    <span class="control-label">Force Outcome (Target Only):</span>
+                    <select id="remote-force-select" class="remote-select" onchange="updateRemoteSettings()">
+                        <option value="random">Disabled (Fair Random)</option>
+                        <option value="0">Force Black (1)</option>
+                        <option value="1">Force Blue (2)</option>
+                        <option value="2">Force Green (3)</option>
+                        <option value="3">Force Purple (4)</option>
+                        <option value="4">Force Red (5)</option>
+                        <option value="5">Force White (6)</option>
+                    </select>
+                </div>
 
-            <button class="action-btn trigger-btn" onclick="sendRollCommand()">⚡ TRIGGER REMOTE ROLL</button>
+                <div class="control-row">
+                    <span class="control-label">Allowed Outcome Filters:</span>
+                    <div class="filter-grid" id="remote-filter-grid"></div>
+                </div>
+
+                <button class="action-btn trigger-btn" onclick="sendRollCommand()">⚡ TRIGGER REMOTE ROLL</button>
+            </div>
         </div>
     </div>
 
@@ -115,16 +137,33 @@
         ];
 
         let currentRigState = { forceValue: "random", allowedIndices: [0, 1, 2, 3, 4, 5] };
+        let activeRoomId = "";
 
         const urlParams = new URLSearchParams(window.location.search);
         const isRemoteControl = urlParams.get('control') === 'true';
+
+        // --- HARDENED WEB CONFIG ---
+        const SUPABASE_URL = "https://sdzxiwctcsgvwsnpkcln.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_jtGiCYw904YDKzsfKdTZnw_ruEw_OTn";
+        let supabaseClient;
+        let channel;
+
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
 
         if (isRemoteControl) {
             document.getElementById('remote-view').classList.add('active-view');
             setupRemoteInterface();
         } else {
             document.getElementById('game-view').classList.add('active-view');
+            
+            // Generate a random 4-letter/number code unique to this specific player tab
+            activeRoomId = Math.random().toString(36).substring(2, 6).toUpperCase();
+            document.getElementById('room-display').textContent = "Room Code: " + activeRoomId;
+            
             setupGameInterface();
+            listenToPrivateRoom(activeRoomId);
         }
 
         function setupGameInterface() {
@@ -154,21 +193,40 @@
             });
         }
 
-        // --- HARDENED WEB CONFIG ---
-        const SUPABASE_URL = "https://sdzxiwctcsgvwsnpkcln.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_jtGiCYw904YDKzsfKdTZnw_ruEw_OTn";
-        
-        let channel;
-        // Use the explicit browser global object 'supabase' safely
-        if (window.supabase && typeof window.supabase.createClient === 'function') {
-            const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            channel = supabaseClient.channel('dice-arena-room', { config: { broadcast: { self: true } } });
+        // Connect the Game screen to its own private radio channel
+        function listenToPrivateRoom(roomId) {
+            if (supabaseClient) {
+                channel = supabaseClient.channel('room-' + roomId, { config: { broadcast: { self: true } } });
+                channel.on('broadcast', { event: 'rig_update' }, function(data) {
+                    currentRigState = data.payload;
+                }).on('broadcast', { event: 'trigger_roll' }, function() {
+                    executeDiceRoll();
+                }).subscribe();
+            }
+        }
 
-            channel.on('broadcast', { event: 'rig_update' }, function(data) {
-                currentRigState = data.payload;
-            }).on('broadcast', { event: 'trigger_roll' }, function() {
-                executeDiceRoll();
-            }).subscribe();
+        // On your phone, switch frequencies to match the player's room code
+        function connectToTargetRoom() {
+            const typedCode = document.getElementById('target-room-input').value.trim().toUpperCase();
+            if(typedCode.length !== 4) {
+                alert("Please enter a valid 4-character room code!");
+                return;
+            }
+
+            if (channel) {
+                channel.unsubscribe();
+            }
+
+            activeRoomId = typedCode;
+            if (supabaseClient) {
+                channel = supabaseClient.client.channel('room-' + activeRoomId, { config: { broadcast: { self: true } } });
+                channel.subscribe((status) => {
+                    if(status === 'SUBSCRIBED') {
+                        document.getElementById('active-controls').style.display = 'flex';
+                        updateRemoteSettings(); // sync settings to room
+                    }
+                });
+            }
         }
 
         function updateRemoteSettings() {
