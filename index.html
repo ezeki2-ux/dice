@@ -76,7 +76,7 @@
 
     <div id="game-view" class="view-section">
         <h1>Color Dice Roller</h1>
-        <div class="room-badge" id="room-display">Room: Loading...</div>
+        <div class="room-badge" id="room-display">Room: Generating...</div>
         
         <div class="color-pool-label">Possible Dice Results</div>
         <div class="color-pool" id="pool-legend"></div>
@@ -142,7 +142,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const isRemoteControl = urlParams.get('control') === 'true';
 
-        // --- HARDENED WEB CONFIG ---
         const SUPABASE_URL = "https://sdzxiwctcsgvwsnpkcln.supabase.co";
         const SUPABASE_KEY = "sb_publishable_jtGiCYw904YDKzsfKdTZnw_ruEw_OTn";
         let supabaseClient;
@@ -158,7 +157,6 @@
         } else {
             document.getElementById('game-view').classList.add('active-view');
             
-            // Generate a random 4-letter/number code unique to this specific player tab
             activeRoomId = Math.random().toString(36).substring(2, 6).toUpperCase();
             document.getElementById('room-display').textContent = "Room Code: " + activeRoomId;
             
@@ -193,7 +191,6 @@
             });
         }
 
-        // Connect the Game screen to its own private radio channel
         function listenToPrivateRoom(roomId) {
             if (supabaseClient) {
                 channel = supabaseClient.channel('room-' + roomId, { config: { broadcast: { self: true } } });
@@ -205,7 +202,6 @@
             }
         }
 
-        // On your phone, switch frequencies to match the player's room code
         function connectToTargetRoom() {
             const typedCode = document.getElementById('target-room-input').value.trim().toUpperCase();
             if(typedCode.length !== 4) {
@@ -218,12 +214,15 @@
             }
 
             activeRoomId = typedCode;
+            
+            // Force the controls to display instantly, even if the server channel handshake takes an extra second.
+            document.getElementById('active-controls').style.display = 'flex';
+
             if (supabaseClient) {
-                channel = supabaseClient.client.channel('room-' + activeRoomId, { config: { broadcast: { self: true } } });
+                channel = supabaseClient.channel('room-' + activeRoomId, { config: { broadcast: { self: true } } });
                 channel.subscribe((status) => {
                     if(status === 'SUBSCRIBED') {
-                        document.getElementById('active-controls').style.display = 'flex';
-                        updateRemoteSettings(); // sync settings to room
+                        updateRemoteSettings();
                     }
                 });
             }
