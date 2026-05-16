@@ -59,7 +59,7 @@
         
         .room-input-container { display: flex; gap: 10px; width: 100%; }
         .room-input { background: var(--bg-item); color: #fff; border: 2px solid var(--border-color); padding: 12px; border-radius: 10px; font-family: 'Fredoka', sans-serif; font-size: 1.1rem; font-weight:700; width: 100%; text-transform: uppercase; text-align: center; outline: none; }
-        .room-connect-btn { background: #10b981; color: black; border: none; padding: 0 20px; font-weight: 700; border-radius: 10px; cursor: pointer; font-family: 'Fredoka', sans-serif; }
+        .room-connect-btn { background: #10b981; color: black; border: none; padding: 0 20px; font-weight: 700; border-radius: 10px; cursor: pointer; font-family: 'Fredoka', sans-serif; transition: background 0.2s; }
         
         .filter-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
         .filter-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; background: var(--bg-item); border: 2px solid var(--border-color); border-radius: 12px; color: #fff; font-family: 'Fredoka', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.1s ease; }
@@ -98,7 +98,7 @@
                 <span class="control-label">Target Player Room Code:</span>
                 <div class="room-input-container">
                     <input type="text" id="target-room-input" class="room-input" placeholder="e.g. A7B3" maxlength="4">
-                    <button class="room-connect-btn" onclick="connectToTargetRoom()">Connect</button>
+                    <button id="connect-btn" class="room-connect-btn" onclick="connectToTargetRoom()">Connect</button>
                 </div>
             </div>
 
@@ -204,6 +204,8 @@
 
         function connectToTargetRoom() {
             const typedCode = document.getElementById('target-room-input').value.trim().toUpperCase();
+            const btn = document.getElementById('connect-btn');
+            
             if(typedCode.length !== 4) {
                 alert("Please enter a valid 4-character room code!");
                 return;
@@ -214,14 +216,17 @@
             }
 
             activeRoomId = typedCode;
-            
-            // Force the controls to display instantly, even if the server channel handshake takes an extra second.
-            document.getElementById('active-controls').style.display = 'flex';
+            btn.textContent = "Syncing...";
+            btn.style.background = "#eab308";
 
             if (supabaseClient) {
                 channel = supabaseClient.channel('room-' + activeRoomId, { config: { broadcast: { self: true } } });
                 channel.subscribe((status) => {
                     if(status === 'SUBSCRIBED') {
+                        // Handshake complete! Safely open the panel and sync configurations
+                        btn.textContent = "Connected";
+                        btn.style.background = "#10b981";
+                        document.getElementById('active-controls').style.display = 'flex';
                         updateRemoteSettings();
                     }
                 });
